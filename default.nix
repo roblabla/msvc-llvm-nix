@@ -19,7 +19,7 @@ stdenvNoCC.mkDerivation {
 
         tar xf ${msvc-src}
 
-        python ${msvc-wine}/bin/vsdownload.py --accept-license --manifest ${manifest} --cache cache --dest $out
+        python ${msvc-wine}/bin/vsdownload.py --accept-license --manifest cache/___manifest___.json --cache cache --dest $out
         ${msvc-wine}/bin/install.sh $out
 
         # Patch the generated paths.

@@ -17,6 +17,7 @@ stdenvNoCC.mkDerivation {
 
         mkdir -p cache
         python vsdownload.py --accept-license --manifest ${manifest} --cache cache --only-download
+        cp ${manifest} cache/___manifest___.json
 
         tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner -cf $out cache
     '';
