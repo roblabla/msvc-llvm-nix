@@ -1,9 +1,33 @@
-{ stdenvNoCC, fetchgit, python38, python38Packages, openssl, writeScript, curl, cacert, msvc-wine }:
-{ manifest, outputHash ? "" }:
+{ lib, stdenvNoCC, fetchgit, python38, python38Packages, openssl, writeScript, curl, cacert, msvc-wine }:
+{
+  manifest
+
+, # SRI hash.
+  hash ? ""
+
+, # Legacy ways of specifying the hash.
+  outputHash ? ""
+, outputHashAlgo ? ""
+, md5 ? ""
+, sha1 ? ""
+, sha256 ? ""
+, sha512 ? "" }:
+
+let
+  hash_ =
+    if hash != "" then { outputHashAlgo = null; outputHash = hash; }
+    else if md5 != "" then throw "fetchurl does not support md5 anymore, please use sha256 or sha512"
+    else if (outputHash != "" && outputHashAlgo != "") then { inherit outputHashAlgo outputHash; }
+    else if sha512 != "" then { outputHashAlgo = "sha512"; outputHash = sha512; }
+    else if sha256 != "" then { outputHashAlgo = "sha256"; outputHash = sha256; }
+    else if sha1   != "" then { outputHashAlgo = "sha1";   outputHash = sha1; }
+    else if cacert != null then { outputHashAlgo = "sha256"; outputHash = ""; }
+    else throw "fetch-msvc requires a hash for fixed-output derivation.";
+in
 stdenvNoCC.mkDerivation {
     name = "src";
 
-    inherit outputHash;
+    inherit (hash_) outputHash outputHashAlgo;
 
     nativeBuildInputs = [ curl cacert openssl python38 python38Packages.simplejson python38Packages.six ];
 

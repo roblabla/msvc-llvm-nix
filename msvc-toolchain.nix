@@ -1,6 +1,6 @@
 { stdenvNoCC, fetchgit, python38, python38Packages, writeScript, msitools, perl, llvmPackages, msvc-wine, msvc-src }:
 stdenvNoCC.mkDerivation {
-    name = "msvc-roblabla";
+    name = "msvc-toolchain";
     buildInputs = [
         msitools
         msvc-wine
