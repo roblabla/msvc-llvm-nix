@@ -26,6 +26,6 @@ stdenvNoCC.mkDerivation {
         sed -i -e "s#CLANG_PATH=.*#CLANG_PATH=${llvmPackages.clang-unwrapped}/bin/clang#" $out/bin/*/clang-cl
         sed -i -e "s#LLD_PATH=.*#LLD_PATH=${llvmPackages.lld}/bin/lld#" $out/bin/*/lld-link
         sed -i -e "s#LLVM_RC=.*#LLVM_RC=${llvmPackages.llvm}/bin/llvm-rc#" $out/bin/*/llvm-rc
-        sed -i -e "s#EXTRA_ARGS=.*#EXTRA_ARGS='/imsvc ${lib.getLib llvmPackages.libclang}/lib/clang/${lib.getVersion llvmPackages.clang}/include'#" $out/bin/*/clang-cl
+        sed -i -e "s#PRE_EXTRA_ARGS=.*#PRE_EXTRA_ARGS='/imsvc ${lib.getLib llvmPackages.libclang}/lib/clang/${lib.getVersion llvmPackages.clang}/include'#" $out/bin/*/clang-cl
     '';
 }
