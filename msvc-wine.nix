@@ -4,8 +4,8 @@ stdenvNoCC.mkDerivation {
 
     src = fetchgit {
         url = "https://github.com/roblabla/msvc-wine";
-        rev = "67700eb9f10109ea877c2d012a4fc025623e4fb8";
-        sha256 = "1bqvyijghx4isqxhjjhn476s8d7v5z4a08shrxbmm5xbyjgi8zy3";
+        rev = "ecccf184d5f79abcd554b5fc8b9b10229edf0ce6";
+        sha256 = "05ywg6pmnbjmg0sxlgrdhmrsqgzqcspyd6ldpw8qj1c4yws98v1f";
     };
 
     buildInputs = [
