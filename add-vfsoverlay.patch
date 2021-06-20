@@ -1,0 +1,141 @@
+diff --git a/COFF/Driver.cpp b/COFF/Driver.cpp
+index 96ac7957f557..f89f835ef5a0 100644
+--- a/COFF/Driver.cpp
++++ b/COFF/Driver.cpp
+@@ -148,7 +148,7 @@ using MBErrPair = std::pair<std::unique_ptr<MemoryBuffer>, std::error_code>;
+
+ // Create a std::future that opens and maps a file using the best strategy for
+ // the host platform.
+-static std::future<MBErrPair> createFutureForFile(std::string path) {
++static std::future<MBErrPair> createFutureForFile(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs, std::string path) {
+ #if _WIN32
+   // On Windows, file I/O is relatively slow so it is best to do this
+   // asynchronously.
+@@ -157,9 +157,10 @@ static std::future<MBErrPair> createFutureForFile(std::string path) {
+   auto strategy = std::launch::deferred;
+ #endif
+   return std::async(strategy, [=]() {
+-    auto mbOrErr = MemoryBuffer::getFile(path,
++    auto mbOrErr = fs->getBufferForFile(path,
+                                          /*FileSize*/ -1,
+-                                         /*RequiresNullTerminator*/ false);
++                                         /*RequiresNullTerminator*/ false,
++                                         /*IsVolatile*/false);
+     if (!mbOrErr)
+       return MBErrPair{nullptr, mbOrErr.getError()};
+     return MBErrPair{std::move(*mbOrErr), std::error_code()};
+@@ -249,7 +250,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
+
+ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
+   auto future = std::make_shared<std::future<MBErrPair>>(
+-      createFutureForFile(std::string(path)));
++      createFutureForFile(vfs, std::string(path)));
+   std::string pathStr = std::string(path);
+   enqueueTask([=]() {
+     auto mbOrErr = future->get();
+@@ -325,7 +326,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
+       "could not get the filename for the member defining symbol " +
+       toCOFFString(sym));
+   auto future = std::make_shared<std::future<MBErrPair>>(
+-      createFutureForFile(childName));
++      createFutureForFile(vfs, childName));
+   enqueueTask([=]() {
+     auto mbOrErr = future->get();
+     if (mbOrErr.second)
+@@ -1197,6 +1198,34 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
+   return None;
+ }
+
++IntrusiveRefCntPtr<llvm::vfs::FileSystem>
++createVFSFromCompilerInvocation(IntrusiveRefCntPtr<llvm::vfs::FileSystem> base_fs, std::vector<std::string> overlay_files) {
++  if (overlay_files.empty())
++    return base_fs;
++
++  IntrusiveRefCntPtr<llvm::vfs::FileSystem> result = base_fs;
++  // earlier vfs files are on the bottom
++  for (const auto &file : overlay_files) {
++    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
++        result->getBufferForFile(file);
++    if (!buffer) {
++      fatal("virtual filesystem overlay file not found: " + file);
++      continue;
++    }
++
++    IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs = llvm::vfs::getVFSFromYAML(
++        std::move(buffer.get()), /*DiagHandler*/ nullptr, file,
++        /*DiagContext*/ nullptr, result);
++    if (!fs) {
++      fatal("invalid virtual filesystem overlay file: " + file);
++      continue;
++    }
++
++    result = fs;
++  }
++  return result;
++}
++
+ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
+   ScopedTimer rootTimer(Timer::root());
+
+@@ -1242,6 +1271,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
+     return;
+   }
+
++  // Handle /vfsoverlay: Sets up the overlay that the driver will work with.
++  std::vector<std::string> overlay_files;
++  for (auto *arg : args.filtered(OPT_vfsoverlay)) {
++    overlay_files.push_back(std::string(arg->getValue()));
++  }
++  vfs = createVFSFromCompilerInvocation(vfs, overlay_files);
++
+   // /threads: takes a positive integer and provides the default value for
+   // /opt:lldltojobs=.
+   if (auto *arg = args.getLastArg(OPT_threads)) {
+diff --git a/COFF/Driver.h b/COFF/Driver.h
+index 6f71a37f729f..172f9be86544 100644
+--- a/COFF/Driver.h
++++ b/COFF/Driver.h
+@@ -13,6 +13,7 @@
+ #include "SymbolTable.h"
+ #include "Common/LLVM.h"
+ #include "Common/Reproduce.h"
++#include "llvm/ADT/IntrusiveRefCntPtr.h"
+ #include "llvm/ADT/Optional.h"
+ #include "llvm/ADT/StringRef.h"
+ #include "llvm/ADT/StringSet.h"
+@@ -22,6 +23,7 @@
+ #include "llvm/Option/ArgList.h"
+ #include "llvm/Support/FileSystem.h"
+ #include "llvm/Support/TarWriter.h"
++#include "llvm/Support/VirtualFileSystem.h"
+ #include <memory>
+ #include <set>
+ #include <vector>
+@@ -78,6 +80,7 @@ private:
+
+ class LinkerDriver {
+ public:
++  LinkerDriver() : vfs(llvm::vfs::getRealFileSystem()) {}
+   void linkerMain(llvm::ArrayRef<const char *> args);
+
+   // Used by the resolver to parse .drectve section contents.
+@@ -148,6 +151,7 @@ private:
+   std::vector<MemoryBufferRef> resources;
+
+   llvm::StringSet<> directivesExports;
++  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs;
+ };
+
+ // Functions below this line are defined in DriverUtils.cpp.
+diff --git a/COFF/Options.td b/COFF/Options.td
+index 73c3380df17c..1f1a04eed7f0 100644
+--- a/COFF/Options.td
++++ b/COFF/Options.td
+@@ -89,6 +89,7 @@ def stub    : P<"stub", "Specify DOS stub file">;
+ def subsystem : P<"subsystem", "Specify subsystem">;
+ def timestamp : P<"timestamp", "Specify the PE header timestamp">;
+ def version : P<"version", "Specify a version number in the PE header">;
++def vfsoverlay : P<"vfsoverlay", "Overlay the virtual filesystem described by file over the real file system">;
+ def wholearchive_file : P<"wholearchive",
+     "Include all object files from this library">;
+

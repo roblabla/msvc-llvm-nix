@@ -4,8 +4,8 @@ stdenvNoCC.mkDerivation {
 
     src = fetchgit {
         url = "https://github.com/roblabla/msvc-wine";
-        rev = "57271f05629b89fd4d26b35d2b56fcaa6c250d2d";
-        sha256 = "1iscvnkzjcadxbrcz6fkxzp2mkrw20rm8gzg2s5fafsw0hldb6vn";
+        rev = "1ba89100f0cba2907f35c37a3bbe62a913ff7ba7";
+        sha256 = "0qryc9blrh2g9h9h47fhwq63cfcwpa1lixba8b48q1f4pdxahvsp";
     };
 
     buildInputs = [
@@ -21,7 +21,6 @@ stdenvNoCC.mkDerivation {
         mkdir -p $out/bin
         cp -v vsdownload.py $out/bin
         cp -v install.sh $out/bin
-        cp -v fixinclude $out/bin
         cp -vr wrappers $out/bin
     '';
 }
