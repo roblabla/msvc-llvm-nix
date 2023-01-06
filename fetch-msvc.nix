@@ -46,6 +46,8 @@ stdenvNoCC.mkDerivation {
         tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner -cf $out cache
     '';
 
+    preferLocalBuild = true;
+
     MANIFEST = manifest;
     SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
 }
