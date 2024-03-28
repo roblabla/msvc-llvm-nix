@@ -1,4 +1,4 @@
-{ stdenvNoCC, python38, python38Packages, perl, fetchgit }:
+{ stdenvNoCC, python3Packages, perl, fetchgit }:
 stdenvNoCC.mkDerivation {
     name = "msvc-wine";
 
@@ -9,9 +9,9 @@ stdenvNoCC.mkDerivation {
     };
 
     buildInputs = [
-        python38
-        python38Packages.simplejson
-        python38Packages.six
+        python3Packages.python
+        python3Packages.simplejson
+        python3Packages.six
         perl
     ];
 

@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, fetchgit, python38, python38Packages, writeScript, msitools, perl, llvmPackages, msvc-wine, msvc-src }:
+{ lib, stdenvNoCC, fetchgit, python3Packages, writeScript, msitools, perl, llvmPackages, msvc-wine, msvc-src }:
 let
     CLANG_HDR_VER = if lib.toIntBase10 (lib.versions.major (lib.getVersion llvmPackages.clang)) < 16 then
         (lib.getVersion llvmPackages.clang)
@@ -10,9 +10,9 @@ stdenvNoCC.mkDerivation {
     buildInputs = [
         msitools
         msvc-wine
-        python38
-        python38Packages.simplejson
-        python38Packages.six
+        python3Packages.python
+        python3Packages.simplejson
+        python3Packages.six
     ];
 
     srcs = [

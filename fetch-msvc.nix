@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, fetchgit, python38, python38Packages, openssl, writeScript, curl, cacert, msvc-wine }:
+{ lib, stdenvNoCC, fetchgit, python3Packages, openssl, writeScript, curl, cacert, msvc-wine }:
 {
   manifest
 
@@ -29,7 +29,7 @@ stdenvNoCC.mkDerivation {
 
     inherit (hash_) outputHash outputHashAlgo;
 
-    nativeBuildInputs = [ curl cacert openssl python38 python38Packages.simplejson python38Packages.six ];
+    nativeBuildInputs = [ curl cacert openssl python3Packages.python python3Packages.simplejson python3Packages.six ];
 
     builder = writeScript "build.sh" ''
         #! ${stdenvNoCC.shell}
